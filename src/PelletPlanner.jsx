@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, ShoppingCart, ChevronDown, ChevronUp, Package, Droplets, Target } from 'lucide-react';
+import { Clock, AlertTriangle, ShoppingCart, ChevronDown, ChevronUp, Package, Droplets, Target, Wind } from 'lucide-react';
 import { addMinutes, subMinutes, format, differenceInHours, parseISO, isValid } from 'date-fns';
 
 // --- CONFIGURATION & DATA ---
@@ -16,14 +16,14 @@ const MEAT_PROFILES = {
     rest: { default: 120, min: 60, maxHold: 300 },
     stallFactor: 0.65,
     defaultTargetTemp: 203,
-    spritz: { recommended: true, startAfter: 120, interval: 60 } // Mins
+    spritz: { recommended: true, startAfter: 120, interval: 60 }
   },
   porkButt: {
     label: "Pork Shoulder / Butt",
     defaultWeight: 8,
     tempProfiles: {
       225: { rate: 1.5 },
-      250: { rate: 1.2 },
+      250: { rate: 1.1 }, // ADJUSTED: Speed up slightly for 250 (was 1.2)
       275: { rate: 1.0 },
     },
     rest: { default: 45, min: 30, maxHold: 300 },
@@ -41,7 +41,7 @@ const MEAT_PROFILES = {
     },
     rest: { default: 15, min: 10, maxHold: 60 },
     stallFactor: 0.50,
-    defaultTargetTemp: 200, // Texture is key for ribs
+    defaultTargetTemp: 200,
     spritz: { recommended: true, startAfter: 90, interval: 45 }
   },
   turkey: {
@@ -60,7 +60,8 @@ const MEAT_PROFILES = {
 };
 
 const WRAP_STRATEGIES = {
-  foil: { label: "Foil / Pan Cover", multiplier: 1.0, desc: "Fastest. Soft bark." },
+  foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." }, // NEW
+  foil: { label: "Alum Foil (Tight Wrap)", multiplier: 1.0, desc: "Fast. Standard method." },
   paper: { label: "Butcher Paper", multiplier: 1.08, desc: "Good bark. Breathable." },
   none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." },
 };
@@ -72,14 +73,15 @@ const AFFILIATE_PRODUCTS = {
   ],
   planning: [
     { id: 3, title: "Pink Butcher Paper", link: "#", why: "Preserve that bark (breathable wrap)." },
-    { id: 4, title: "Heavy Duty Foil (Extra Wide)", link: "#", why: "Best for 'Boat' or Pan wrapping." }
+    { id: 4, title: "Aluminum Pans (Deep)", link: "#", why: "Essential for the Braise/Boat method." },
+    { id: 5, title: "Heavy Duty Foil", link: "#", why: "Seal the pan tight to speed up cook." }
   ]
 };
 
 export default function PelletPlanner() {
   const [inputs, setInputs] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pelletPlanV3');
+      const saved = localStorage.getItem('pelletPlanV4');
       if (saved) return JSON.parse(saved);
     }
     return {
@@ -89,12 +91,12 @@ export default function PelletPlanner() {
       restTime: 45,
       serveTime: '',
       prepTime: 45,
-      wrapStrategy: 'foil',
+      wrapStrategy: 'foil_pan', // Updated default to match common recipes
       wrapTemp: 165,
-      targetTemp: 205,         // NEW: Target Internal Temp
-      spritzEnabled: true,     // NEW: Spritz Toggle
-      spritzStart: 120,        // NEW: Wait 2 hours
-      spritzInterval: 60       // NEW: Every 1 hour
+      targetTemp: 205,
+      spritzEnabled: true,
+      spritzStart: 120,
+      spritzInterval: 60
     };
   });
 
@@ -103,7 +105,7 @@ export default function PelletPlanner() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('pelletPlanV3', JSON.stringify(inputs));
+    localStorage.setItem('pelletPlanV4', JSON.stringify(inputs));
   }, [inputs]);
 
   const handleMeatChange = (type) => {
@@ -113,7 +115,7 @@ export default function PelletPlanner() {
       meatType: type,
       weight: profile.defaultWeight,
       restTime: profile.rest.default,
-      wrapStrategy: type === 'turkey' ? 'none' : 'foil',
+      wrapStrategy: type === 'turkey' ? 'none' : 'foil_pan',
       wrapTemp: 165,
       targetTemp: profile.defaultTargetTemp,
       spritzEnabled: profile.spritz.recommended,
@@ -129,21 +131,42 @@ export default function PelletPlanner() {
     const rate = profile.tempProfiles[inputs.temp].rate;
     const wrapMod = WRAP_STRATEGIES[inputs.wrapStrategy].multiplier;
     
-    // Core Math
+    // --- 1. Base Calc ---
     let baseCookHours = inputs.weight * rate;
+    
+    // --- 2. Wrap Impact ---
     let adjustedCookHours = baseCookHours * wrapMod;
+
+    // --- 3. Spritz Tax (The "Lid Open" Penalty) ---
+    // Calculate how many times we spritz based on estimated duration
+    let spritzCount = 0;
+    if (inputs.spritzEnabled) {
+        // Rough duration minutes
+        const estDurationMins = adjustedCookHours * 60;
+        const spritzWindowMins = estDurationMins - inputs.spritzStart;
+        if (spritzWindowMins > 0) {
+            spritzCount = Math.floor(spritzWindowMins / inputs.spritzInterval);
+        }
+    }
+    // Add 15 mins per spritz (recovery time)
+    const spritzPenaltyHours = (spritzCount * 15) / 60; 
+    
+    adjustedCookHours += spritzPenaltyHours;
+
+    // --- 4. Buffer ---
+    // We keep 15% buffer for safety
     const bufferHours = adjustedCookHours * 0.15; 
     const totalCookMinutes = (adjustedCookHours + bufferHours) * 60;
     
     const serveDate = parseISO(inputs.serveTime);
     if (!isValid(serveDate)) return;
 
-    // Backward Calculation
+    // --- 5. Timeline Generation ---
     const finishCookTime = subMinutes(serveDate, inputs.restTime);
     const startCookTime = subMinutes(finishCookTime, totalCookMinutes);
     const startPrepTime = subMinutes(startCookTime, inputs.prepTime);
     
-    // Wrap Time Calculation
+    // Wrap Time
     let wrapTimingFactor = profile.stallFactor;
     if (inputs.wrapStrategy !== 'none') {
         const tempDiff = inputs.wrapTemp - 160;
@@ -152,19 +175,13 @@ export default function PelletPlanner() {
     const minutesUntilWrap = totalCookMinutes * wrapTimingFactor;
     const wrapTime = addMinutes(startCookTime, minutesUntilWrap);
 
-    // Spritz Window Calculation
+    // Spritz Window
     let spritzStartTime = null;
     let spritzEndTime = null;
-    
-    if (inputs.spritzEnabled) {
+    if (inputs.spritzEnabled && spritzCount > 0) {
         spritzStartTime = addMinutes(startCookTime, inputs.spritzStart);
-        // We stop spritzing when we wrap (or near end if no wrap)
+        // Stop spritzing at wrap (usually) or end
         spritzEndTime = inputs.wrapStrategy !== 'none' ? wrapTime : subMinutes(finishCookTime, 60);
-        
-        // Safety check: If spritz start is after wrap, disable it for this plan
-        if (spritzStartTime >= spritzEndTime) {
-            spritzStartTime = null;
-        }
     }
 
     // Warnings
@@ -173,6 +190,12 @@ export default function PelletPlanner() {
       newWarnings.push({
         type: 'quality',
         msg: `⚠️ Long Rest Warning: ${profile.label} may dry out if held > ${(profile.rest.maxHold/60).toFixed(1)}h without active heat.`
+      });
+    }
+    if (spritzCount > 3) {
+         newWarnings.push({
+        type: 'timing',
+        msg: `ℹ️ "Lid Open" Tax: You are spritzing ${spritzCount} times. This added ~${(spritzCount * 15)} mins to your plan.`
       });
     }
     
@@ -185,7 +208,7 @@ export default function PelletPlanner() {
       wrapTime: wrapTime,
       finishCook: finishCookTime,
       serve: serveDate,
-      spritzWindow: spritzStartTime ? { start: spritzStartTime, end: spritzEndTime } : null,
+      spritzWindow: spritzStartTime ? { start: spritzStartTime, end: spritzEndTime, count: spritzCount } : null,
       totalCookHours: (totalCookMinutes / 60).toFixed(1),
       affiliateMode
     });
@@ -298,6 +321,7 @@ export default function PelletPlanner() {
                             </div>
                         </div>
                     )}
+                    <p className="text-[10px] text-gray-400 mt-1 italic">{WRAP_STRATEGIES[inputs.wrapStrategy].desc}</p>
                  </div>
 
                  {/* Spritz Settings */}
@@ -416,7 +440,7 @@ export default function PelletPlanner() {
               <p className="text-sm text-gray-500">Close the lid. Don't look.</p>
             </div>
 
-            {/* 3. Spritz Phase (Rendered as a block if active) */}
+            {/* 3. Spritz Phase */}
             {plan.spritzWindow && (
                 <div className="relative pl-6">
                     <div className="absolute -left-[9px] bg-blue-300 h-4 w-4 rounded-full border-4 border-white shadow-sm"></div>
@@ -428,7 +452,7 @@ export default function PelletPlanner() {
                                 </h4>
                                 <p className="text-xs text-blue-700 mt-1">
                                     Start: <b>{formatTime(plan.spritzWindow.start)}</b><br/>
-                                    Repeat every {inputs.spritzInterval} mins until Wrap.
+                                    Repeat every {inputs.spritzInterval} mins (~{plan.spritzWindow.count} times).
                                 </p>
                              </div>
                         </div>
