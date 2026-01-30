@@ -265,7 +265,7 @@ export default function PelletPlanner() {
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen p-4 font-sans text-gray-800">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900">🔥 Pellet Planner</h1>
-        <p className="text-sm text-gray-500">Master Recipe Mode (V7)</p>
+        <p className="text-sm text-gray-500">Master Recipe Mode (V8)</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
@@ -347,12 +347,13 @@ export default function PelletPlanner() {
                             <label className="text-xs text-blue-900 font-semibold flex items-center">
                                 <Utensils size={12} className="mr-1"/> Spatchcock?
                             </label>
-                            <input 
-                                type="checkbox" 
-                                checked={inputs.isSpatchcock}
-                                onChange={(e) => setInputs({...inputs, isSpatchcock: e.target.checked})}
-                                className="h-4 w-4"
-                            />
+                            {/* CUSTOM TOGGLE SWITCH */}
+                            <div 
+                                className={`w-8 h-5 flex items-center rounded-full p-1 cursor-pointer transition-colors ${inputs.isSpatchcock ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                onClick={() => setInputs({...inputs, isSpatchcock: !inputs.isSpatchcock})}
+                            >
+                                <div className={`bg-white h-3 w-3 rounded-full shadow-md transform duration-300 ease-in-out ${inputs.isSpatchcock ? 'translate-x-3' : ''}`}></div>
+                            </div>
                          </div>
                      )}
                      {/* Brisket Toggle */}
@@ -361,12 +362,13 @@ export default function PelletPlanner() {
                             <label className="text-xs text-blue-900 font-semibold flex items-center">
                                 <Flame size={12} className="mr-1"/> Fat Side Up?
                             </label>
-                            <input 
-                                type="checkbox" 
-                                checked={inputs.fatSideUp}
-                                onChange={(e) => setInputs({...inputs, fatSideUp: e.target.checked})}
-                                className="h-4 w-4"
-                            />
+                            {/* CUSTOM TOGGLE SWITCH */}
+                            <div 
+                                className={`w-8 h-5 flex items-center rounded-full p-1 cursor-pointer transition-colors ${inputs.fatSideUp ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                onClick={() => setInputs({...inputs, fatSideUp: !inputs.fatSideUp})}
+                            >
+                                <div className={`bg-white h-3 w-3 rounded-full shadow-md transform duration-300 ease-in-out ${inputs.fatSideUp ? 'translate-x-3' : ''}`}></div>
+                            </div>
                          </div>
                      )}
                  </div>
@@ -401,19 +403,20 @@ export default function PelletPlanner() {
                     </select>
                  </div>
 
-                 {/* Baste/Spritz Settings (Fully Toggleable) */}
+                 {/* Baste/Spritz Settings (With Custom Toggle) */}
                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                         <label className="text-xs font-bold text-gray-700 uppercase flex items-center">
                              <Droplets size={14} className="mr-2 text-blue-500"/> 
                              {plan?.isPoultry ? "Butter Baste" : "Spritz / Baste"}
                         </label>
-                        <input 
-                            type="checkbox" 
-                            checked={inputs.spritzEnabled}
-                            onChange={(e) => setInputs({...inputs, spritzEnabled: e.target.checked})}
-                            className="h-4 w-4 text-blue-600 rounded"
-                        />
+                        {/* CUSTOM TOGGLE SWITCH - REPLACED HIDDEN CHECKBOX */}
+                        <div 
+                            className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${inputs.spritzEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                            onClick={() => setInputs({...inputs, spritzEnabled: !inputs.spritzEnabled})}
+                        >
+                            <div className={`bg-white h-4 w-4 rounded-full shadow-md transform duration-300 ease-in-out ${inputs.spritzEnabled ? 'translate-x-4' : ''}`}></div>
+                        </div>
                     </div>
                     {inputs.spritzEnabled && (
                         <div className="grid grid-cols-2 gap-3">
