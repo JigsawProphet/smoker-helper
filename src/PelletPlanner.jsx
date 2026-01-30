@@ -97,7 +97,7 @@ const AFFILIATE_PRODUCTS = {
 export default function PelletPlanner() {
   const [inputs, setInputs] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pelletPlanV6');
+      const saved = localStorage.getItem('pelletPlanV7');
       if (saved) return JSON.parse(saved);
     }
     return {
@@ -123,7 +123,7 @@ export default function PelletPlanner() {
   const [showSettings, setShowSettings] = useState(false); 
 
   useEffect(() => {
-    localStorage.setItem('pelletPlanV6', JSON.stringify(inputs));
+    localStorage.setItem('pelletPlanV7', JSON.stringify(inputs));
   }, [inputs]);
 
   const handleMeatChange = (type) => {
@@ -265,7 +265,7 @@ export default function PelletPlanner() {
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen p-4 font-sans text-gray-800">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900">🔥 Pellet Planner</h1>
-        <p className="text-sm text-gray-500">Master Recipe Mode (V6)</p>
+        <p className="text-sm text-gray-500">Master Recipe Mode (V7)</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
