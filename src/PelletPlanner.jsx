@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, ShoppingCart, ChevronDown, ChevronUp, Package, Droplets, Target, Wind } from 'lucide-react';
+import { Clock, AlertTriangle, ShoppingCart, ChevronDown, ChevronUp, Package, Droplets, Target, Utensils, Flame } from 'lucide-react';
 import { addMinutes, subMinutes, format, differenceInHours, parseISO, isValid } from 'date-fns';
 
 // --- CONFIGURATION & DATA ---
@@ -16,23 +16,23 @@ const MEAT_PROFILES = {
     rest: { default: 120, min: 60, maxHold: 300 },
     stallFactor: 0.65,
     defaultTargetTemp: 203,
-    spritz: { recommended: true, startAfter: 120, interval: 60 }
+    spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Cider Vinegar" }
   },
   porkButt: {
     label: "Pork Shoulder / Butt",
     defaultWeight: 8,
     tempProfiles: {
       225: { rate: 1.5 },
-      250: { rate: 1.1 }, // ADJUSTED: Speed up slightly for 250 (was 1.2)
+      250: { rate: 1.1 }, 
       275: { rate: 1.0 },
     },
     rest: { default: 45, min: 30, maxHold: 300 },
     stallFactor: 0.60,
     defaultTargetTemp: 205,
-    spritz: { recommended: true, startAfter: 120, interval: 60 }
+    spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Juice/Vinegar" }
   },
   ribs: {
-    label: "Pork Ribs (3-2-1 style)",
+    label: "Pork Ribs (Spare/Baby Back)",
     defaultWeight: 3,
     tempProfiles: {
       225: { rate: 2.0 },
@@ -41,26 +41,42 @@ const MEAT_PROFILES = {
     },
     rest: { default: 15, min: 10, maxHold: 60 },
     stallFactor: 0.50,
-    defaultTargetTemp: 200,
-    spritz: { recommended: true, startAfter: 90, interval: 45 }
+    defaultTargetTemp: 200, 
+    spritz: { recommended: true, startAfter: 90, interval: 45, type: "Apple Cider Vinegar" }
   },
   turkey: {
-    label: "Turkey Breast (Boneless)",
-    defaultWeight: 4,
+    label: "Turkey (Whole)",
+    defaultWeight: 12,
     tempProfiles: {
-      225: { rate: 0.75 },
+      225: { rate: 0.75 }, // Warning range
       250: { rate: 0.5 },
-      275: { rate: 0.4 },
+      275: { rate: 0.35 }, // Faster at high temp
+      300: { rate: 0.30 }, // New High Temp for Turkey
+      325: { rate: 0.25 }
     },
-    rest: { default: 20, min: 15, maxHold: 60 },
-    stallFactor: 0.80,
-    defaultTargetTemp: 160,
-    spritz: { recommended: false, startAfter: 60, interval: 30 }
+    rest: { default: 30, min: 20, maxHold: 90 },
+    stallFactor: 0.80, // Less stall
+    defaultTargetTemp: 165,
+    spritz: { recommended: false, startAfter: 60, interval: 45, type: "Melted Butter" } // Butter baste, not spritz
+  },
+   chicken: {
+    label: "Chicken (Whole)",
+    defaultWeight: 5,
+    tempProfiles: {
+      225: { rate: 0.8 }, 
+      250: { rate: 0.6 },
+      275: { rate: 0.5 }, 
+      325: { rate: 0.35 }
+    },
+    rest: { default: 15, min: 10, maxHold: 45 },
+    stallFactor: 0.85,
+    defaultTargetTemp: 165,
+    spritz: { recommended: false, startAfter: 45, interval: 45, type: "Melted Butter/Oil" }
   }
 };
 
 const WRAP_STRATEGIES = {
-  foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." }, // NEW
+  foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." },
   foil: { label: "Alum Foil (Tight Wrap)", multiplier: 1.0, desc: "Fast. Standard method." },
   paper: { label: "Butcher Paper", multiplier: 1.08, desc: "Good bark. Breathable." },
   none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." },
@@ -68,20 +84,20 @@ const WRAP_STRATEGIES = {
 
 const AFFILIATE_PRODUCTS = {
   instant: [
-    { id: 1, title: "Instant Read Thermometer", link: "#", why: "Don't wrap by time, wrap by temp." },
-    { id: 2, title: "Spray Bottle (Food Safe)", link: "#", why: "For applying apple cider vinegar spritz." }
+    { id: 1, title: "Instant Read Thermometer", link: "#", why: "Safety first. Verify 165°F." },
+    { id: 2, title: "Heat Resistant Gloves", link: "#", why: "Handle hot pans/birds safely." }
   ],
   planning: [
     { id: 3, title: "Pink Butcher Paper", link: "#", why: "Preserve that bark (breathable wrap)." },
-    { id: 4, title: "Aluminum Pans (Deep)", link: "#", why: "Essential for the Braise/Boat method." },
-    { id: 5, title: "Heavy Duty Foil", link: "#", why: "Seal the pan tight to speed up cook." }
+    { id: 4, title: "Deep Aluminum Pans", link: "#", why: "Essential for boat method or catching drippings." },
+    { id: 5, title: "Poultry Shears", link: "#", why: "For spatchcocking the bird easily." }
   ]
 };
 
 export default function PelletPlanner() {
   const [inputs, setInputs] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pelletPlanV4');
+      const saved = localStorage.getItem('pelletPlanV5');
       if (saved) return JSON.parse(saved);
     }
     return {
@@ -91,12 +107,16 @@ export default function PelletPlanner() {
       restTime: 45,
       serveTime: '',
       prepTime: 45,
-      wrapStrategy: 'foil_pan', // Updated default to match common recipes
+      wrapStrategy: 'foil_pan', 
       wrapTemp: 165,
       targetTemp: 205,
       spritzEnabled: true,
       spritzStart: 120,
-      spritzInterval: 60
+      spritzInterval: 60,
+      
+      // NEW V5 INPUTS
+      isSpatchcock: false, // For poultry
+      fatSideUp: false,    // For Brisket
     };
   });
 
@@ -105,56 +125,79 @@ export default function PelletPlanner() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('pelletPlanV4', JSON.stringify(inputs));
+    localStorage.setItem('pelletPlanV5', JSON.stringify(inputs));
   }, [inputs]);
 
   const handleMeatChange = (type) => {
     const profile = MEAT_PROFILES[type];
+    const isPoultry = type === 'turkey' || type === 'chicken';
+    
     setInputs(prev => ({
       ...prev,
       meatType: type,
       weight: profile.defaultWeight,
       restTime: profile.rest.default,
-      wrapStrategy: type === 'turkey' ? 'none' : 'foil_pan',
+      // Default to No Wrap for poultry (crispy skin), Foil Pan for Pork
+      wrapStrategy: isPoultry ? 'none' : 'foil_pan', 
       wrapTemp: 165,
       targetTemp: profile.defaultTargetTemp,
-      spritzEnabled: profile.spritz.recommended,
+      
+      // Context Aware Spritz Defaults
+      spritzEnabled: isPoultry ? true : profile.spritz.recommended, // Enable butter baste for poultry
       spritzStart: profile.spritz.startAfter,
-      spritzInterval: profile.spritz.interval
+      spritzInterval: profile.spritz.interval,
+      
+      // Reset Toggles
+      isSpatchcock: false,
+      fatSideUp: false,
+      temp: type === 'turkey' ? 275 : 250 // Turkey default higher for safety
     }));
   };
 
+  // --- LOGIC ENGINE ---
   useEffect(() => {
     if (!inputs.serveTime || !inputs.weight) return;
 
     const profile = MEAT_PROFILES[inputs.meatType];
-    const rate = profile.tempProfiles[inputs.temp].rate;
+    const isPoultry = inputs.meatType === 'turkey' || inputs.meatType === 'chicken';
+    
+    // Safety Fallback for Temp (if user switches meats and temp isn't in profile)
+    let rate = 1.0;
+    if (profile.tempProfiles[inputs.temp]) {
+        rate = profile.tempProfiles[inputs.temp].rate;
+    } else {
+        // Fallback or find nearest
+        rate = 1.0;
+    }
+
     const wrapMod = WRAP_STRATEGIES[inputs.wrapStrategy].multiplier;
     
-    // --- 1. Base Calc ---
+    // --- 1. Base Calc & Spatchcock Modifier ---
     let baseCookHours = inputs.weight * rate;
+    
+    if (inputs.isSpatchcock && isPoultry) {
+        baseCookHours = baseCookHours * 0.75; // 25% faster 
+    }
     
     // --- 2. Wrap Impact ---
     let adjustedCookHours = baseCookHours * wrapMod;
 
-    // --- 3. Spritz Tax (The "Lid Open" Penalty) ---
-    // Calculate how many times we spritz based on estimated duration
+    // --- 3. Spritz/Baste Tax ---
     let spritzCount = 0;
+    // Logic: If Brisket + Fat Side Up, user might disable spritz, but if enabled, calculate tax.
     if (inputs.spritzEnabled) {
-        // Rough duration minutes
         const estDurationMins = adjustedCookHours * 60;
         const spritzWindowMins = estDurationMins - inputs.spritzStart;
         if (spritzWindowMins > 0) {
             spritzCount = Math.floor(spritzWindowMins / inputs.spritzInterval);
         }
     }
-    // Add 15 mins per spritz (recovery time)
-    const spritzPenaltyHours = (spritzCount * 15) / 60; 
     
+    // Poultry Basting Tax: Opening lid for butter baste still loses heat, but maybe less critical than 12hr brisket
+    const spritzPenaltyHours = (spritzCount * 15) / 60; 
     adjustedCookHours += spritzPenaltyHours;
 
     // --- 4. Buffer ---
-    // We keep 15% buffer for safety
     const bufferHours = adjustedCookHours * 0.15; 
     const totalCookMinutes = (adjustedCookHours + bufferHours) * 60;
     
@@ -180,37 +223,49 @@ export default function PelletPlanner() {
     let spritzEndTime = null;
     if (inputs.spritzEnabled && spritzCount > 0) {
         spritzStartTime = addMinutes(startCookTime, inputs.spritzStart);
-        // Stop spritzing at wrap (usually) or end
         spritzEndTime = inputs.wrapStrategy !== 'none' ? wrapTime : subMinutes(finishCookTime, 60);
     }
 
-    // Warnings
+    // --- WARNINGS & CHECKS ---
     const newWarnings = [];
-    if (inputs.restTime > profile.rest.maxHold) {
-      newWarnings.push({
-        type: 'quality',
-        msg: `⚠️ Long Rest Warning: ${profile.label} may dry out if held > ${(profile.rest.maxHold/60).toFixed(1)}h without active heat.`
-      });
+    
+    // Turkey Safety Check [cite: 57, 267]
+    if (inputs.meatType === 'turkey' && inputs.weight > 14 && inputs.temp < 275 && !inputs.isSpatchcock) {
+        newWarnings.push({
+            type: 'safety',
+            msg: `⛔ SAFETY ALERT: A ${inputs.weight}lb whole turkey at ${inputs.temp}°F is dangerous. The breast may dry out before legs are safe, or it may linger in the Danger Zone. Please increase temp to 275°F+ or use "Spatchcock" mode.`
+        });
     }
-    if (spritzCount > 3) {
+
+    // Poultry Skin Warning 
+    if (isPoultry && inputs.wrapStrategy === 'none' && inputs.temp < 275) {
          newWarnings.push({
-        type: 'timing',
-        msg: `ℹ️ "Lid Open" Tax: You are spritzing ${spritzCount} times. This added ~${(spritzCount * 15)} mins to your plan.`
-      });
+            type: 'quality',
+            msg: `⚠️ Rubber Skin Alert: Poultry skin needs 275°F+ to crisp. At ${inputs.temp}°F, the skin may be tough.`
+        });
+    }
+    
+    // Brisket Fat Side Up Warning 
+    if (inputs.meatType === 'brisket' && inputs.fatSideUp && inputs.spritzEnabled) {
+        newWarnings.push({
+            type: 'info',
+            msg: `ℹ️ Tip: With "Fat Side Up", the melting fat bastes the meat. You may not need to spritz (opening the lid slows you down).`
+        });
     }
     
     const hoursUntilServe = differenceInHours(serveDate, new Date());
     const affiliateMode = hoursUntilServe < 24 ? 'instant' : 'planning';
 
     setPlan({
-      startPrep: startPrepTime,
-      startCook: startCookTime,
-      wrapTime: wrapTime,
-      finishCook: finishCookTime,
-      serve: serveDate,
-      spritzWindow: spritzStartTime ? { start: spritzStartTime, end: spritzEndTime, count: spritzCount } : null,
-      totalCookHours: (totalCookMinutes / 60).toFixed(1),
-      affiliateMode
+        startPrep: startPrepTime,
+        startCook: startCookTime,
+        wrapTime: wrapTime,
+        finishCook: finishCookTime,
+        serve: serveDate,
+        spritzWindow: spritzStartTime ? { start: spritzStartTime, end: spritzEndTime, count: spritzCount, type: profile.spritz.type } : null,
+        totalCookHours: (totalCookMinutes / 60).toFixed(1),
+        affiliateMode,
+        isPoultry
     });
 
     setWarnings(newWarnings);
@@ -223,7 +278,7 @@ export default function PelletPlanner() {
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen p-4 font-sans text-gray-800">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900">🔥 Pellet Planner</h1>
-        <p className="text-sm text-gray-500">Don't guess. Eat on time.</p>
+        <p className="text-sm text-gray-500">Research-Backed Logic (V5)</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
@@ -231,7 +286,7 @@ export default function PelletPlanner() {
           
           {/* Main Inputs */}
           <div>
-            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">What are we smoking?</label>
+            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Meat</label>
             <select 
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-lg focus:ring-2 focus:ring-orange-500 outline-none"
               value={inputs.meatType}
@@ -261,15 +316,22 @@ export default function PelletPlanner() {
                 value={inputs.temp}
                 onChange={(e) => setInputs({...inputs, temp: parseInt(e.target.value)})}
               >
-                <option value={225}>225° Low</option>
-                <option value={250}>250° Std</option>
-                <option value={275}>275° Hot</option>
+                {/* Dynamic Temp Options based on Meat? or Standard list */}
+                <option value={225}>225° Low/Slow</option>
+                <option value={250}>250° Standard</option>
+                <option value={275}>275° Turbo</option>
+                {(inputs.meatType === 'turkey' || inputs.meatType === 'chicken') && (
+                     <>
+                     <option value={300}>300° Roast</option>
+                     <option value={325}>325° Crisp Skin</option>
+                     </>
+                )}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">When do we eat?</label>
+            <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Serve Time</label>
             <input 
               type="datetime-local" 
               className="w-full p-3 bg-orange-50 border border-orange-200 text-orange-900 rounded-lg text-lg font-bold focus:ring-2 focus:ring-orange-500 outline-none"
@@ -278,20 +340,49 @@ export default function PelletPlanner() {
             />
           </div>
 
-          {/* Advanced Toggle */}
+          {/* ADVANCED SECTION */}
           <div className="pt-2 border-t border-gray-100">
             <button 
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="flex items-center w-full justify-between text-xs font-bold text-gray-500 hover:text-orange-600 py-2"
             >
-              <span>ADVANCED (WRAP, SPRITZ & TARGET)</span>
+              <span>ADVANCED (WRAP, BASTE & TECHNIQUE)</span>
               {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             
             {showAdvanced && (
               <div className="space-y-4 pt-2 animate-fade-in">
                  
-                 {/* Wrap Strategy */}
+                 {/* 1. Technique Toggles (Context Aware) */}
+                 {(inputs.meatType === 'turkey' || inputs.meatType === 'chicken') && (
+                     <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-100">
+                        <label className="text-sm text-blue-900 font-semibold flex items-center">
+                            <Utensils size={14} className="mr-2"/> Spatchcock? (Butterfly)
+                        </label>
+                        <input 
+                            type="checkbox" 
+                            checked={inputs.isSpatchcock}
+                            onChange={(e) => setInputs({...inputs, isSpatchcock: e.target.checked})}
+                            className="h-4 w-4"
+                        />
+                     </div>
+                 )}
+                 
+                 {inputs.meatType === 'brisket' && (
+                     <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-100">
+                        <label className="text-sm text-blue-900 font-semibold flex items-center">
+                            <Flame size={14} className="mr-2"/> Fat Side Up?
+                        </label>
+                        <input 
+                            type="checkbox" 
+                            checked={inputs.fatSideUp}
+                            onChange={(e) => setInputs({...inputs, fatSideUp: e.target.checked})}
+                            className="h-4 w-4"
+                        />
+                     </div>
+                 )}
+
+                 {/* 2. Wrap Strategy */}
                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <div className="flex items-center mb-2">
                         <Package size={14} className="mr-2 text-orange-500"/>
@@ -306,30 +397,17 @@ export default function PelletPlanner() {
                             <option key={key} value={key}>{data.label}</option>
                         ))}
                     </select>
-                    
-                    {inputs.wrapStrategy !== 'none' && (
-                        <div className="flex items-center justify-between mt-2">
-                            <label className="text-xs text-gray-500">Wrap at Internal Temp:</label>
-                            <div className="flex items-center">
-                                <input 
-                                    type="number" 
-                                    className="w-16 p-1 text-center bg-white border rounded text-sm font-mono"
-                                    value={inputs.wrapTemp}
-                                    onChange={(e) => setInputs({...inputs, wrapTemp: parseInt(e.target.value)})}
-                                />
-                                <span className="text-xs text-gray-400 ml-1">°F</span>
-                            </div>
-                        </div>
-                    )}
                     <p className="text-[10px] text-gray-400 mt-1 italic">{WRAP_STRATEGIES[inputs.wrapStrategy].desc}</p>
                  </div>
 
-                 {/* Spritz Settings */}
+                 {/* 3. Spritz / Baste */}
                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center">
                             <Droplets size={14} className="mr-2 text-blue-500"/>
-                            <label className="text-xs font-bold text-gray-700 uppercase">Spritz / Baste</label>
+                            <label className="text-xs font-bold text-gray-700 uppercase">
+                                {plan?.isPoultry ? "Butter Baste" : "Spritz / Baste"}
+                            </label>
                         </div>
                         <input 
                             type="checkbox" 
@@ -362,33 +440,6 @@ export default function PelletPlanner() {
                         </div>
                     )}
                  </div>
-
-                 {/* Target Temp & Rest */}
-                 <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs text-gray-500 mb-1 flex items-center">
-                            <Target size={12} className="mr-1"/> Target Finish Temp
-                        </label>
-                        <div className="relative">
-                            <input 
-                                type="number" 
-                                className="w-full p-2 bg-white border rounded text-sm pr-6"
-                                value={inputs.targetTemp}
-                                onChange={(e) => setInputs({...inputs, targetTemp: parseInt(e.target.value)})}
-                            />
-                            <span className="absolute right-2 top-2 text-xs text-gray-400">°F</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs text-gray-500 mb-1">Rest Time (mins)</label>
-                        <input 
-                            type="number" 
-                            className="w-full p-2 bg-white border rounded text-sm"
-                            value={inputs.restTime}
-                            onChange={(e) => setInputs({...inputs, restTime: parseInt(e.target.value)})}
-                        />
-                    </div>
-                 </div>
               </div>
             )}
           </div>
@@ -399,13 +450,11 @@ export default function PelletPlanner() {
         <div className="animate-slide-up">
           
           {warnings.map((w, i) => (
-            <div key={i} className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r">
-              <div className="flex">
-                <AlertTriangle className="h-5 w-5 text-yellow-400" />
+            <div key={i} className={`border-l-4 p-4 mb-6 rounded-r flex ${w.type === 'safety' ? 'bg-red-50 border-red-500' : 'bg-yellow-50 border-yellow-400'}`}>
+                <AlertTriangle className={`h-5 w-5 ${w.type === 'safety' ? 'text-red-500' : 'text-yellow-400'}`} />
                 <div className="ml-3">
-                  <p className="text-sm text-yellow-700">{w.msg}</p>
+                  <p className={`text-sm ${w.type === 'safety' ? 'text-red-700 font-bold' : 'text-yellow-700'}`}>{w.msg}</p>
                 </div>
-              </div>
             </div>
           ))}
 
@@ -429,7 +478,9 @@ export default function PelletPlanner() {
               <div className="absolute -left-[9px] bg-blue-500 h-4 w-4 rounded-full border-4 border-white shadow-sm"></div>
               <p className="text-xs text-gray-400 font-mono">{formatTime(plan.startPrep)}</p>
               <h4 className="font-bold text-gray-800">Start Prep</h4>
-              <p className="text-sm text-gray-500">Trim, season, ignite grill.</p>
+              <p className="text-sm text-gray-500">Trim, season, ignite grill. 
+              {inputs.isSpatchcock && " Butterfly (Spatchcock) the bird."}
+              </p>
             </div>
 
             {/* 2. Cook Start */}
@@ -437,10 +488,13 @@ export default function PelletPlanner() {
               <div className="absolute -left-[9px] bg-gray-800 h-4 w-4 rounded-full border-4 border-white shadow-sm"></div>
               <p className="text-xs text-gray-400 font-mono">{formatTime(plan.startCook)}</p>
               <h4 className="font-bold text-gray-800">Meat on Grate</h4>
-              <p className="text-sm text-gray-500">Close the lid. Don't look.</p>
+              <p className="text-sm text-gray-500">
+                {inputs.meatType === 'brisket' && inputs.fatSideUp ? "Fat Side UP. " : "Fat Side DOWN. "}
+                Close the lid.
+              </p>
             </div>
 
-            {/* 3. Spritz Phase */}
+            {/* 3. Spritz / Baste Phase */}
             {plan.spritzWindow && (
                 <div className="relative pl-6">
                     <div className="absolute -left-[9px] bg-blue-300 h-4 w-4 rounded-full border-4 border-white shadow-sm"></div>
@@ -448,10 +502,11 @@ export default function PelletPlanner() {
                         <div className="flex justify-between items-start">
                              <div>
                                 <h4 className="font-bold text-blue-900 text-sm flex items-center">
-                                    <Droplets size={12} className="mr-1"/> Spritz Phase
+                                    <Droplets size={12} className="mr-1"/> {plan.isPoultry ? "Baste Phase" : "Spritz Phase"}
                                 </h4>
                                 <p className="text-xs text-blue-700 mt-1">
                                     Start: <b>{formatTime(plan.spritzWindow.start)}</b><br/>
+                                    Use: {plan.spritzWindow.type}<br/>
                                     Repeat every {inputs.spritzInterval} mins (~{plan.spritzWindow.count} times).
                                 </p>
                              </div>
@@ -471,14 +526,16 @@ export default function PelletPlanner() {
                             {inputs.wrapTemp}°F
                         </span>
                     </div>
-                    <p className="text-sm text-gray-500">Bark is set. Wrap in {WRAP_STRATEGIES[inputs.wrapStrategy].label}.</p>
+                    <p className="text-sm text-gray-500">
+                        {inputs.meatType === 'ribs' ? "Add butter/sugar/honey (optional)." : `Wrap in ${WRAP_STRATEGIES[inputs.wrapStrategy].label}.`}
+                    </p>
                 </div>
             ) : (
                 <div className="relative pl-6">
                     <div className="absolute -left-[9px] bg-gray-300 h-4 w-4 rounded-full border-4 border-white shadow-sm"></div>
                     <p className="text-xs text-gray-400 font-mono">~{formatTime(plan.wrapTime)}</p>
                     <h4 className="font-semibold text-gray-600">The Stall</h4>
-                    <p className="text-sm text-gray-500">Temp will stick around 160°F.</p>
+                    <p className="text-sm text-gray-500">Temp will stick around 160°F. Be patient.</p>
                 </div>
             )}
 
@@ -486,10 +543,13 @@ export default function PelletPlanner() {
             <div className="relative pl-6">
               <div className="absolute -left-[9px] bg-green-500 h-4 w-4 rounded-full border-4 border-white shadow-sm"></div>
               <p className="text-xs text-gray-400 font-mono">{formatTime(plan.finishCook)}</p>
-              <h4 className="font-bold text-gray-800">Target Finish (Probe Tender)</h4>
+              <h4 className="font-bold text-gray-800">Target Finish</h4>
               <p className="text-sm text-gray-500">
-                Target Internal Temp: <b>{inputs.targetTemp}°F</b>.<br/>
-                Pull when probe slides like butter.
+                {inputs.meatType === 'ribs' ? (
+                    "Check Visuals: Bend test or bones sticking out."
+                ) : (
+                    <>Target Internal Temp: <b>{inputs.targetTemp}°F</b> (Probe Tender).</>
+                )}
               </p>
             </div>
 
