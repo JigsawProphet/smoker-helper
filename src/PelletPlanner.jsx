@@ -13,7 +13,7 @@ const MEAT_PROFILES = {
       250: { rate: 1.25 },
       275: { rate: 1.0 },
     },
-    [cite_start]rest: { default: 120, min: 60, maxHold: 300 }, // [cite: 95]
+    rest: { default: 120, min: 60, maxHold: 300 }, // [cite: 95]
     [cite_start]stallFactor: 0.65, // [cite: 85]
     [cite_start]defaultTargetTemp: 203, // [cite: 93]
     [cite_start]spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Cider Vinegar" } // [cite: 81]
@@ -56,7 +56,7 @@ const MEAT_PROFILES = {
     },
     [cite_start]rest: { default: 30, min: 20, maxHold: 90 }, // [cite: 285]
     stallFactor: 0.80, 
-    [cite_start]defaultTargetTemp: 165, // [cite: 280]
+    [cite_start]defaultTargetTemp: 165, // [cite: 279]
     [cite_start]spritz: { recommended: false, startAfter: 60, interval: 45, type: "Melted Butter" } // [cite: 273]
   },
    chicken: {
@@ -79,7 +79,7 @@ const WRAP_STRATEGIES = {
   foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." [cite_start]}, // [cite: 134]
   foil: { label: "Alum Foil (Tight Wrap)", multiplier: 1.0, desc: "Fast. Standard method." [cite_start]}, // [cite: 23]
   paper: { label: "Butcher Paper", multiplier: 1.08, desc: "Good bark. Breathable." [cite_start]}, // [cite: 24]
-  none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." [cite_start]}, // [cite: 90]
+  none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." [cite_start]}, // [cite: 22]
 };
 
 const AFFILIATE_PRODUCTS = {
@@ -170,15 +170,15 @@ export default function PelletPlanner() {
     // 2. Cook Duration Calc
     let baseCookHours = inputs.weight * rate;
     
-    [cite_start]// Spatchcock Modifier [cite: 218]
+    // Spatchcock Modifier
     if (inputs.isSpatchcock && isPoultry) {
         baseCookHours = baseCookHours * 0.75; 
     }
     
-    [cite_start]// Wrap Modifier [cite: 42]
+    // Wrap Modifier
     let adjustedCookHours = baseCookHours * wrapMod;
 
-    [cite_start]// 3. Spritz Tax [cite: 28]
+    // 3. Spritz Tax
     let spritzCount = 0;
     if (inputs.spritzEnabled) {
         const estDurationMins = adjustedCookHours * 60;
@@ -205,14 +205,14 @@ export default function PelletPlanner() {
     // Wrap Milestone Calculation
     let wrapTimingFactor = profile.stallFactor;
     if (inputs.wrapStrategy !== 'none') {
-        [cite_start]// Adjust wrap timing based on user's custom Wrap Temp [cite: 86]
+        // Adjust wrap timing based on user's custom Wrap Temp
         const tempDiff = inputs.wrapTemp - 160;
         if (tempDiff > 0) wrapTimingFactor += (tempDiff * 0.005); 
     }
     const minutesUntilWrap = totalCookMinutes * wrapTimingFactor;
     const wrapTime = addMinutes(startCookTime, minutesUntilWrap);
 
-    [cite_start]// Spritz Window Calculation [cite: 364]
+    // Spritz Window Calculation
     let spritzStartTime = null;
     let spritzEndTime = null;
     if (inputs.spritzEnabled && spritzCount > 0) {
@@ -224,7 +224,7 @@ export default function PelletPlanner() {
     // --- WARNINGS ---
     const newWarnings = [];
     
-    [cite_start]// Turkey Safety [cite: 25]
+    // Turkey Safety
     if (inputs.meatType === 'turkey' && inputs.weight > 14 && inputs.temp < 275 && !inputs.isSpatchcock) {
         newWarnings.push({
             type: 'safety',
@@ -232,7 +232,7 @@ export default function PelletPlanner() {
         });
     }
 
-    [cite_start]// Poultry Skin [cite: 19]
+    // Poultry Skin
     if (isPoultry && inputs.wrapStrategy === 'none' && inputs.temp < 275) {
          newWarnings.push({
             type: 'quality',
