@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, ShoppingCart, ChevronDown, ChevronUp, Package, Droplets, Target, Utensils, Flame } from 'lucide-react';
+import { Clock, AlertTriangle, ShoppingCart, ChevronDown, ChevronUp, Package, Droplets, Target, Utensils, Flame, Settings } from 'lucide-react';
 import { addMinutes, subMinutes, format, differenceInHours, parseISO, isValid } from 'date-fns';
 
 // --- CONFIGURATION & DATA ---
@@ -13,10 +13,10 @@ const MEAT_PROFILES = {
       250: { rate: 1.25 },
       275: { rate: 1.0 },
     },
-    rest: { default: 120, min: 60, maxHold: 300 },
-    stallFactor: 0.65,
-    defaultTargetTemp: 203,
-    spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Cider Vinegar" }
+    [cite_start]rest: { default: 120, min: 60, maxHold: 300 }, // [cite: 95]
+    [cite_start]stallFactor: 0.65, // [cite: 85]
+    [cite_start]defaultTargetTemp: 203, // [cite: 93]
+    [cite_start]spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Cider Vinegar" } // [cite: 81]
   },
   porkButt: {
     label: "Pork Shoulder / Butt",
@@ -26,10 +26,10 @@ const MEAT_PROFILES = {
       250: { rate: 1.1 }, 
       275: { rate: 1.0 },
     },
-    rest: { default: 45, min: 30, maxHold: 300 },
-    stallFactor: 0.60,
-    defaultTargetTemp: 205,
-    spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Juice/Vinegar" }
+    [cite_start]rest: { default: 45, min: 30, maxHold: 300 }, // [cite: 142]
+    [cite_start]stallFactor: 0.60, // [cite: 127]
+    [cite_start]defaultTargetTemp: 205, // [cite: 139]
+    [cite_start]spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Juice/Vinegar" } // [cite: 126]
   },
   ribs: {
     label: "Pork Ribs (Spare/Baby Back)",
@@ -39,25 +39,25 @@ const MEAT_PROFILES = {
       250: { rate: 1.75 },
       275: { rate: 1.5 },
     },
-    rest: { default: 15, min: 10, maxHold: 60 },
+    [cite_start]rest: { default: 15, min: 10, maxHold: 60 }, // [cite: 51]
     stallFactor: 0.50,
     defaultTargetTemp: 200, 
-    spritz: { recommended: true, startAfter: 90, interval: 45, type: "Apple Cider Vinegar" }
+    [cite_start]spritz: { recommended: true, startAfter: 90, interval: 45, type: "Apple Cider Vinegar" } // [cite: 169]
   },
   turkey: {
     label: "Turkey (Whole)",
     defaultWeight: 12,
     tempProfiles: {
-      225: { rate: 0.75 }, // Warning range
+      225: { rate: 0.75 }, 
       250: { rate: 0.5 },
-      275: { rate: 0.35 }, // Faster at high temp
-      300: { rate: 0.30 }, // New High Temp for Turkey
+      275: { rate: 0.35 }, 
+      300: { rate: 0.30 }, 
       325: { rate: 0.25 }
     },
-    rest: { default: 30, min: 20, maxHold: 90 },
-    stallFactor: 0.80, // Less stall
-    defaultTargetTemp: 165,
-    spritz: { recommended: false, startAfter: 60, interval: 45, type: "Melted Butter" } // Butter baste, not spritz
+    [cite_start]rest: { default: 30, min: 20, maxHold: 90 }, // [cite: 285]
+    stallFactor: 0.80, 
+    [cite_start]defaultTargetTemp: 165, // [cite: 280]
+    [cite_start]spritz: { recommended: false, startAfter: 60, interval: 45, type: "Melted Butter" } // [cite: 273]
   },
    chicken: {
     label: "Chicken (Whole)",
@@ -68,18 +68,18 @@ const MEAT_PROFILES = {
       275: { rate: 0.5 }, 
       325: { rate: 0.35 }
     },
-    rest: { default: 15, min: 10, maxHold: 45 },
+    [cite_start]rest: { default: 15, min: 10, maxHold: 45 }, // [cite: 241]
     stallFactor: 0.85,
-    defaultTargetTemp: 165,
-    spritz: { recommended: false, startAfter: 45, interval: 45, type: "Melted Butter/Oil" }
+    [cite_start]defaultTargetTemp: 165, // [cite: 236]
+    [cite_start]spritz: { recommended: false, startAfter: 45, interval: 45, type: "Melted Butter/Oil" } // [cite: 230]
   }
 };
 
 const WRAP_STRATEGIES = {
-  foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." },
-  foil: { label: "Alum Foil (Tight Wrap)", multiplier: 1.0, desc: "Fast. Standard method." },
-  paper: { label: "Butcher Paper", multiplier: 1.08, desc: "Good bark. Breathable." },
-  none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." },
+  foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." [cite_start]}, // [cite: 134]
+  foil: { label: "Alum Foil (Tight Wrap)", multiplier: 1.0, desc: "Fast. Standard method." [cite_start]}, // [cite: 23]
+  paper: { label: "Butcher Paper", multiplier: 1.08, desc: "Good bark. Breathable." [cite_start]}, // [cite: 24]
+  none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." [cite_start]}, // [cite: 90]
 };
 
 const AFFILIATE_PRODUCTS = {
@@ -97,7 +97,7 @@ const AFFILIATE_PRODUCTS = {
 export default function PelletPlanner() {
   const [inputs, setInputs] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pelletPlanV5');
+      const saved = localStorage.getItem('pelletPlanV6');
       if (saved) return JSON.parse(saved);
     }
     return {
@@ -113,19 +113,17 @@ export default function PelletPlanner() {
       spritzEnabled: true,
       spritzStart: 120,
       spritzInterval: 60,
-      
-      // NEW V5 INPUTS
-      isSpatchcock: false, // For poultry
-      fatSideUp: false,    // For Brisket
+      isSpatchcock: false, 
+      fatSideUp: false,    
     };
   });
 
   const [plan, setPlan] = useState(null);
   const [warnings, setWarnings] = useState([]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showSettings, setShowSettings] = useState(false); // Renamed from showAdvanced
 
   useEffect(() => {
-    localStorage.setItem('pelletPlanV5', JSON.stringify(inputs));
+    localStorage.setItem('pelletPlanV6', JSON.stringify(inputs));
   }, [inputs]);
 
   const handleMeatChange = (type) => {
@@ -137,20 +135,18 @@ export default function PelletPlanner() {
       meatType: type,
       weight: profile.defaultWeight,
       restTime: profile.rest.default,
-      // Default to No Wrap for poultry (crispy skin), Foil Pan for Pork
       wrapStrategy: isPoultry ? 'none' : 'foil_pan', 
-      wrapTemp: 165,
+      [cite_start]wrapTemp: 165, // [cite: 130]
       targetTemp: profile.defaultTargetTemp,
       
-      // Context Aware Spritz Defaults
-      spritzEnabled: isPoultry ? true : profile.spritz.recommended, // Enable butter baste for poultry
+      // Smart Defaults (but user can override later)
+      spritzEnabled: isPoultry ? true : profile.spritz.recommended, 
       spritzStart: profile.spritz.startAfter,
       spritzInterval: profile.spritz.interval,
       
-      // Reset Toggles
       isSpatchcock: false,
       fatSideUp: false,
-      temp: type === 'turkey' ? 275 : 250 // Turkey default higher for safety
+      temp: type === 'turkey' ? 275 : 250 
     }));
   };
 
@@ -161,30 +157,29 @@ export default function PelletPlanner() {
     const profile = MEAT_PROFILES[inputs.meatType];
     const isPoultry = inputs.meatType === 'turkey' || inputs.meatType === 'chicken';
     
-    // Safety Fallback for Temp (if user switches meats and temp isn't in profile)
+    // 1. Base Rate
     let rate = 1.0;
     if (profile.tempProfiles[inputs.temp]) {
         rate = profile.tempProfiles[inputs.temp].rate;
     } else {
-        // Fallback or find nearest
-        rate = 1.0;
+        rate = 1.0; // Fallback
     }
 
     const wrapMod = WRAP_STRATEGIES[inputs.wrapStrategy].multiplier;
     
-    // --- 1. Base Calc & Spatchcock Modifier ---
+    // 2. Cook Duration Calc
     let baseCookHours = inputs.weight * rate;
     
+    [cite_start]// Spatchcock Modifier [cite: 218]
     if (inputs.isSpatchcock && isPoultry) {
-        baseCookHours = baseCookHours * 0.75; // 25% faster 
+        baseCookHours = baseCookHours * 0.75; 
     }
     
-    // --- 2. Wrap Impact ---
+    [cite_start]// Wrap Modifier [cite: 42]
     let adjustedCookHours = baseCookHours * wrapMod;
 
-    // --- 3. Spritz/Baste Tax ---
+    [cite_start]// 3. Spritz Tax [cite: 28]
     let spritzCount = 0;
-    // Logic: If Brisket + Fat Side Up, user might disable spritz, but if enabled, calculate tax.
     if (inputs.spritzEnabled) {
         const estDurationMins = adjustedCookHours * 60;
         const spritzWindowMins = estDurationMins - inputs.spritzStart;
@@ -192,64 +187,56 @@ export default function PelletPlanner() {
             spritzCount = Math.floor(spritzWindowMins / inputs.spritzInterval);
         }
     }
-    
-    // Poultry Basting Tax: Opening lid for butter baste still loses heat, but maybe less critical than 12hr brisket
     const spritzPenaltyHours = (spritzCount * 15) / 60; 
     adjustedCookHours += spritzPenaltyHours;
 
-    // --- 4. Buffer ---
+    // 4. Buffer (Always 15% for Pellet Variability)
     const bufferHours = adjustedCookHours * 0.15; 
     const totalCookMinutes = (adjustedCookHours + bufferHours) * 60;
     
     const serveDate = parseISO(inputs.serveTime);
     if (!isValid(serveDate)) return;
 
-    // --- 5. Timeline Generation ---
+    // 5. Timeline Generation (Backwards)
     const finishCookTime = subMinutes(serveDate, inputs.restTime);
     const startCookTime = subMinutes(finishCookTime, totalCookMinutes);
     const startPrepTime = subMinutes(startCookTime, inputs.prepTime);
     
-    // Wrap Time
+    // Wrap Milestone Calculation
     let wrapTimingFactor = profile.stallFactor;
     if (inputs.wrapStrategy !== 'none') {
+        [cite_start]// Adjust wrap timing based on user's custom Wrap Temp [cite: 86]
         const tempDiff = inputs.wrapTemp - 160;
         if (tempDiff > 0) wrapTimingFactor += (tempDiff * 0.005); 
     }
     const minutesUntilWrap = totalCookMinutes * wrapTimingFactor;
     const wrapTime = addMinutes(startCookTime, minutesUntilWrap);
 
-    // Spritz Window
+    [cite_start]// Spritz Window Calculation [cite: 364]
     let spritzStartTime = null;
     let spritzEndTime = null;
     if (inputs.spritzEnabled && spritzCount > 0) {
         spritzStartTime = addMinutes(startCookTime, inputs.spritzStart);
+        // Stop spritzing when wrapped
         spritzEndTime = inputs.wrapStrategy !== 'none' ? wrapTime : subMinutes(finishCookTime, 60);
     }
 
-    // --- WARNINGS & CHECKS ---
+    // --- WARNINGS ---
     const newWarnings = [];
     
-    // Turkey Safety Check [cite: 57, 267]
+    [cite_start]// Turkey Safety [cite: 25]
     if (inputs.meatType === 'turkey' && inputs.weight > 14 && inputs.temp < 275 && !inputs.isSpatchcock) {
         newWarnings.push({
             type: 'safety',
-            msg: `⛔ SAFETY ALERT: A ${inputs.weight}lb whole turkey at ${inputs.temp}°F is dangerous. The breast may dry out before legs are safe, or it may linger in the Danger Zone. Please increase temp to 275°F+ or use "Spatchcock" mode.`
+            msg: `⛔ SAFETY ALERT: Large turkeys (>14lb) at ${inputs.temp}°F are unsafe. Increase temp to 275°F+ or use "Spatchcock" mode.`
         });
     }
 
-    // Poultry Skin Warning 
+    [cite_start]// Poultry Skin [cite: 19]
     if (isPoultry && inputs.wrapStrategy === 'none' && inputs.temp < 275) {
          newWarnings.push({
             type: 'quality',
-            msg: `⚠️ Rubber Skin Alert: Poultry skin needs 275°F+ to crisp. At ${inputs.temp}°F, the skin may be tough.`
-        });
-    }
-    
-    // Brisket Fat Side Up Warning 
-    if (inputs.meatType === 'brisket' && inputs.fatSideUp && inputs.spritzEnabled) {
-        newWarnings.push({
-            type: 'info',
-            msg: `ℹ️ Tip: With "Fat Side Up", the melting fat bastes the meat. You may not need to spritz (opening the lid slows you down).`
+            msg: `⚠️ Rubber Skin Alert: Poultry skin needs 275°F+ to crisp. Your current temp is low.`
         });
     }
     
@@ -278,7 +265,7 @@ export default function PelletPlanner() {
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen p-4 font-sans text-gray-800">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900">🔥 Pellet Planner</h1>
-        <p className="text-sm text-gray-500">Research-Backed Logic (V5)</p>
+        <p className="text-sm text-gray-500">Master Recipe Mode (V6)</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
@@ -316,7 +303,6 @@ export default function PelletPlanner() {
                 value={inputs.temp}
                 onChange={(e) => setInputs({...inputs, temp: parseInt(e.target.value)})}
               >
-                {/* Dynamic Temp Options based on Meat? or Standard list */}
                 <option value={225}>225° Low/Slow</option>
                 <option value={250}>250° Standard</option>
                 <option value={275}>275° Turbo</option>
@@ -340,56 +326,72 @@ export default function PelletPlanner() {
             />
           </div>
 
-          {/* ADVANCED SECTION */}
-          <div className="pt-2 border-t border-gray-100">
+          {/* RECIPE SETTINGS (Expanded) */}
+          <div className="pt-4 border-t border-gray-100">
             <button 
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center w-full justify-between text-xs font-bold text-gray-500 hover:text-orange-600 py-2"
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center w-full justify-between text-sm font-bold text-gray-700 hover:text-orange-600 py-2"
             >
-              <span>ADVANCED (WRAP, BASTE & TECHNIQUE)</span>
-              {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              <span className="flex items-center"><Settings size={16} className="mr-2 text-orange-500"/> Recipe Settings</span>
+              {showSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             
-            {showAdvanced && (
-              <div className="space-y-4 pt-2 animate-fade-in">
+            {showSettings && (
+              <div className="space-y-4 pt-3 animate-slide-up">
                  
-                 {/* 1. Technique Toggles (Context Aware) */}
-                 {(inputs.meatType === 'turkey' || inputs.meatType === 'chicken') && (
-                     <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-100">
-                        <label className="text-sm text-blue-900 font-semibold flex items-center">
-                            <Utensils size={14} className="mr-2"/> Spatchcock? (Butterfly)
-                        </label>
-                        <input 
-                            type="checkbox" 
-                            checked={inputs.isSpatchcock}
-                            onChange={(e) => setInputs({...inputs, isSpatchcock: e.target.checked})}
-                            className="h-4 w-4"
-                        />
-                     </div>
-                 )}
-                 
-                 {inputs.meatType === 'brisket' && (
-                     <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-100">
-                        <label className="text-sm text-blue-900 font-semibold flex items-center">
-                            <Flame size={14} className="mr-2"/> Fat Side Up?
-                        </label>
-                        <input 
-                            type="checkbox" 
-                            checked={inputs.fatSideUp}
-                            onChange={(e) => setInputs({...inputs, fatSideUp: e.target.checked})}
-                            className="h-4 w-4"
-                        />
-                     </div>
-                 )}
+                 {/* Technique Toggles */}
+                 <div className="grid grid-cols-2 gap-3">
+                    {/* Poultry Toggle */}
+                    {(inputs.meatType === 'turkey' || inputs.meatType === 'chicken') && (
+                         <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-100">
+                            <label className="text-xs text-blue-900 font-semibold flex items-center">
+                                <Utensils size={12} className="mr-1"/> Spatchcock?
+                            </label>
+                            <input 
+                                type="checkbox" 
+                                checked={inputs.isSpatchcock}
+                                onChange={(e) => setInputs({...inputs, isSpatchcock: e.target.checked})}
+                                className="h-4 w-4"
+                            />
+                         </div>
+                     )}
+                     {/* Brisket Toggle */}
+                     {inputs.meatType === 'brisket' && (
+                         <div className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-100">
+                            <label className="text-xs text-blue-900 font-semibold flex items-center">
+                                <Flame size={12} className="mr-1"/> Fat Side Up?
+                            </label>
+                            <input 
+                                type="checkbox" 
+                                checked={inputs.fatSideUp}
+                                onChange={(e) => setInputs({...inputs, fatSideUp: e.target.checked})}
+                                className="h-4 w-4"
+                            />
+                         </div>
+                     )}
+                 </div>
 
-                 {/* 2. Wrap Strategy */}
+                 {/* Wrap Settings */}
                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <div className="flex items-center mb-2">
-                        <Package size={14} className="mr-2 text-orange-500"/>
-                        <label className="text-xs font-bold text-gray-700 uppercase">Wrap Strategy</label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-bold text-gray-700 uppercase flex items-center">
+                            <Package size={14} className="mr-2 text-orange-500"/> Wrap
+                        </label>
+                        {inputs.wrapStrategy !== 'none' && (
+                            <div className="flex items-center">
+                                <span className="text-[10px] text-gray-500 mr-2">Temp:</span>
+                                <input 
+                                    type="number" 
+                                    className="w-12 p-1 text-center bg-white border rounded text-xs"
+                                    value={inputs.wrapTemp}
+                                    onChange={(e) => setInputs({...inputs, wrapTemp: parseInt(e.target.value)})}
+                                />
+                                <span className="text-[10px] text-gray-400 ml-1">°F</span>
+                            </div>
+                        )}
                     </div>
                     <select 
-                        className="w-full p-2 bg-white border rounded mb-2 text-sm"
+                        className="w-full p-2 bg-white border rounded text-sm"
                         value={inputs.wrapStrategy}
                         onChange={(e) => setInputs({...inputs, wrapStrategy: e.target.value})}
                     >
@@ -397,18 +399,15 @@ export default function PelletPlanner() {
                             <option key={key} value={key}>{data.label}</option>
                         ))}
                     </select>
-                    <p className="text-[10px] text-gray-400 mt-1 italic">{WRAP_STRATEGIES[inputs.wrapStrategy].desc}</p>
                  </div>
 
-                 {/* 3. Spritz / Baste */}
+                 {/* Baste/Spritz Settings (Fully Toggleable) */}
                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                            <Droplets size={14} className="mr-2 text-blue-500"/>
-                            <label className="text-xs font-bold text-gray-700 uppercase">
-                                {plan?.isPoultry ? "Butter Baste" : "Spritz / Baste"}
-                            </label>
-                        </div>
+                        <label className="text-xs font-bold text-gray-700 uppercase flex items-center">
+                             <Droplets size={14} className="mr-2 text-blue-500"/> 
+                             {plan?.isPoultry ? "Butter Baste" : "Spritz / Baste"}
+                        </label>
                         <input 
                             type="checkbox" 
                             checked={inputs.spritzEnabled}
@@ -416,29 +415,59 @@ export default function PelletPlanner() {
                             className="h-4 w-4 text-blue-600 rounded"
                         />
                     </div>
-                    
                     {inputs.spritzEnabled && (
-                        <div className="grid grid-cols-2 gap-3 mt-2">
+                        <div className="grid grid-cols-2 gap-3">
                              <div>
-                                <label className="block text-[10px] text-gray-500 mb-1">Start After (mins)</label>
+                                <label className="block text-[10px] text-gray-500 mb-1">Start (mins)</label>
                                 <input 
                                     type="number" 
-                                    className="w-full p-1.5 bg-white border rounded text-sm"
+                                    className="w-full p-1.5 bg-white border rounded text-xs"
                                     value={inputs.spritzStart}
                                     onChange={(e) => setInputs({...inputs, spritzStart: parseInt(e.target.value)})}
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] text-gray-500 mb-1">Repeat Every (mins)</label>
+                                <label className="block text-[10px] text-gray-500 mb-1">Interval (mins)</label>
                                 <input 
                                     type="number" 
-                                    className="w-full p-1.5 bg-white border rounded text-sm"
+                                    className="w-full p-1.5 bg-white border rounded text-xs"
                                     value={inputs.spritzInterval}
                                     onChange={(e) => setInputs({...inputs, spritzInterval: parseInt(e.target.value)})}
                                 />
                             </div>
                         </div>
                     )}
+                 </div>
+
+                 {/* Finish Temps & Prep */}
+                 <div className="grid grid-cols-3 gap-2">
+                    <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Target °F</label>
+                        <input 
+                            type="number" 
+                            className="w-full p-1.5 bg-white border rounded text-xs"
+                            value={inputs.targetTemp}
+                            onChange={(e) => setInputs({...inputs, targetTemp: parseInt(e.target.value)})}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Rest (min)</label>
+                        <input 
+                            type="number" 
+                            className="w-full p-1.5 bg-white border rounded text-xs"
+                            value={inputs.restTime}
+                            onChange={(e) => setInputs({...inputs, restTime: parseInt(e.target.value)})}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Prep (min)</label>
+                        <input 
+                            type="number" 
+                            className="w-full p-1.5 bg-white border rounded text-xs"
+                            value={inputs.prepTime}
+                            onChange={(e) => setInputs({...inputs, prepTime: parseInt(e.target.value)})}
+                        />
+                    </div>
                  </div>
               </div>
             )}
