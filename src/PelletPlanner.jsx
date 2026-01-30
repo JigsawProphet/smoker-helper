@@ -13,10 +13,10 @@ const MEAT_PROFILES = {
       250: { rate: 1.25 },
       275: { rate: 1.0 },
     },
-    rest: { default: 120, min: 60, maxHold: 300 }, // [cite: 95]
-    [cite_start]stallFactor: 0.65, // [cite: 85]
-    [cite_start]defaultTargetTemp: 203, // [cite: 93]
-    [cite_start]spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Cider Vinegar" } // [cite: 81]
+    rest: { default: 120, min: 60, maxHold: 300 },
+    stallFactor: 0.65,
+    defaultTargetTemp: 203,
+    spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Cider Vinegar" }
   },
   porkButt: {
     label: "Pork Shoulder / Butt",
@@ -26,10 +26,10 @@ const MEAT_PROFILES = {
       250: { rate: 1.1 }, 
       275: { rate: 1.0 },
     },
-    [cite_start]rest: { default: 45, min: 30, maxHold: 300 }, // [cite: 142]
-    [cite_start]stallFactor: 0.60, // [cite: 127]
-    [cite_start]defaultTargetTemp: 205, // [cite: 139]
-    [cite_start]spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Juice/Vinegar" } // [cite: 126]
+    rest: { default: 45, min: 30, maxHold: 300 },
+    stallFactor: 0.60,
+    defaultTargetTemp: 205,
+    spritz: { recommended: true, startAfter: 120, interval: 60, type: "Apple Juice/Vinegar" }
   },
   ribs: {
     label: "Pork Ribs (Spare/Baby Back)",
@@ -39,10 +39,10 @@ const MEAT_PROFILES = {
       250: { rate: 1.75 },
       275: { rate: 1.5 },
     },
-    [cite_start]rest: { default: 15, min: 10, maxHold: 60 }, // [cite: 51]
+    rest: { default: 15, min: 10, maxHold: 60 },
     stallFactor: 0.50,
     defaultTargetTemp: 200, 
-    [cite_start]spritz: { recommended: true, startAfter: 90, interval: 45, type: "Apple Cider Vinegar" } // [cite: 169]
+    spritz: { recommended: true, startAfter: 90, interval: 45, type: "Apple Cider Vinegar" }
   },
   turkey: {
     label: "Turkey (Whole)",
@@ -54,10 +54,10 @@ const MEAT_PROFILES = {
       300: { rate: 0.30 }, 
       325: { rate: 0.25 }
     },
-    [cite_start]rest: { default: 30, min: 20, maxHold: 90 }, // [cite: 285]
+    rest: { default: 30, min: 20, maxHold: 90 },
     stallFactor: 0.80, 
-    [cite_start]defaultTargetTemp: 165, // [cite: 279]
-    [cite_start]spritz: { recommended: false, startAfter: 60, interval: 45, type: "Melted Butter" } // [cite: 273]
+    defaultTargetTemp: 165,
+    spritz: { recommended: false, startAfter: 60, interval: 45, type: "Melted Butter" }
   },
    chicken: {
     label: "Chicken (Whole)",
@@ -68,18 +68,18 @@ const MEAT_PROFILES = {
       275: { rate: 0.5 }, 
       325: { rate: 0.35 }
     },
-    [cite_start]rest: { default: 15, min: 10, maxHold: 45 }, // [cite: 241]
+    rest: { default: 15, min: 10, maxHold: 45 },
     stallFactor: 0.85,
-    [cite_start]defaultTargetTemp: 165, // [cite: 236]
-    [cite_start]spritz: { recommended: false, startAfter: 45, interval: 45, type: "Melted Butter/Oil" } // [cite: 230]
+    defaultTargetTemp: 165,
+    spritz: { recommended: false, startAfter: 45, interval: 45, type: "Melted Butter/Oil" }
   }
 };
 
 const WRAP_STRATEGIES = {
-  foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." [cite_start]}, // [cite: 134]
-  foil: { label: "Alum Foil (Tight Wrap)", multiplier: 1.0, desc: "Fast. Standard method." [cite_start]}, // [cite: 23]
-  paper: { label: "Butcher Paper", multiplier: 1.08, desc: "Good bark. Breathable." [cite_start]}, // [cite: 24]
-  none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." [cite_start]}, // [cite: 22]
+  foil_pan: { label: "Foil Pan Covered (Braise)", multiplier: 0.95, desc: "Fastest. Steams meat. Soft bark." },
+  foil: { label: "Alum Foil (Tight Wrap)", multiplier: 1.0, desc: "Fast. Standard method." },
+  paper: { label: "Butcher Paper", multiplier: 1.08, desc: "Good bark. Breathable." },
+  none: { label: "No Wrap (Naked)", multiplier: 1.25, desc: "Max bark. Long stall." },
 };
 
 const AFFILIATE_PRODUCTS = {
@@ -120,7 +120,7 @@ export default function PelletPlanner() {
 
   const [plan, setPlan] = useState(null);
   const [warnings, setWarnings] = useState([]);
-  const [showSettings, setShowSettings] = useState(false); // Renamed from showAdvanced
+  const [showSettings, setShowSettings] = useState(false); 
 
   useEffect(() => {
     localStorage.setItem('pelletPlanV6', JSON.stringify(inputs));
@@ -136,7 +136,7 @@ export default function PelletPlanner() {
       weight: profile.defaultWeight,
       restTime: profile.rest.default,
       wrapStrategy: isPoultry ? 'none' : 'foil_pan', 
-      [cite_start]wrapTemp: 165, // [cite: 130]
+      wrapTemp: 165,
       targetTemp: profile.defaultTargetTemp,
       
       // Smart Defaults (but user can override later)
